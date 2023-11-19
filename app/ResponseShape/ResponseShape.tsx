@@ -11,6 +11,9 @@ import {
 	useToasts,
 } from '@tldraw/tldraw'
 
+import StackBlitzSDK from '@stackblitz/sdk'
+import { useRef } from 'react'
+
 export type ResponseShape = TLBaseShape<
 	'response',
 	{
@@ -39,10 +42,12 @@ export class ResponseShapeUtil extends BaseBoxShapeUtil<ResponseShape> {
 	override component(shape: ResponseShape) {
 		const isEditing = useIsEditing(shape.id)
 		const toast = useToasts()
+		const iframeRef = useRef<HTMLIFrameElement>(null)
 		return (
 			<HTMLContainer className="tl-embed-container" id={shape.id}>
 				{shape.props.html ? (
 					<iframe
+						ref={iframeRef}
 						className="tl-embed"
 						srcDoc={shape.props.html}
 						width={toDomPrecision(shape.props.w)}
@@ -51,6 +56,7 @@ export class ResponseShapeUtil extends BaseBoxShapeUtil<ResponseShape> {
 						style={{
 							border: 0,
 							pointerEvents: isEditing ? 'auto' : 'none',
+							height: '100%',
 						}}
 					/>
 				) : (
@@ -85,14 +91,99 @@ export class ResponseShapeUtil extends BaseBoxShapeUtil<ResponseShape> {
 						if (navigator && navigator.clipboard) {
 							navigator.clipboard.writeText(shape.props.html)
 							toast.addToast({
-								icon: 'duplicate',
+								icon: 'code',
 								title: 'Copied to clipboard',
 							})
 						}
 					}}
 					onPointerDown={stopEventPropagation}
 				>
-					<Icon icon="duplicate" />
+					<Icon icon="code" />
+				</div>
+				<div
+					title="embed code playground"
+					style={{
+						position: 'absolute',
+						top: 40,
+						right: -40,
+						height: 40,
+						width: 40,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						cursor: 'pointer',
+						pointerEvents: 'all',
+					}}
+					onClick={() => {
+						StackBlitzSDK.embedProject(
+							iframeRef.current!,
+							{
+								files: {
+									'index.html': shape.props.html,
+									'index.js': '',
+								},
+								template: 'javascript',
+								title: 'tldrawn!',
+							},
+							{
+								openFile: 'index.html',
+								hideNavigation: true,
+								hideDevTools: true,
+								theme: 'light',
+								view: 'preview',
+							}
+						)
+						toast.addToast({
+							icon: 'external-link',
+							title: 'Embedded a code playground',
+						})
+						setTimeout(() => {
+							const newIframe = document.getElementById(shape.id)!.querySelector('iframe')!
+							newIframe.height = '100%'
+						})
+					}}
+					onPointerDown={stopEventPropagation}
+				>
+					<span style={{ rotate: '0.5turn' }}>
+						<Icon icon="external-link" />
+					</span>
+				</div>
+				<div
+					title="open in code playground"
+					style={{
+						position: 'absolute',
+						top: 80,
+						right: -40,
+						height: 40,
+						width: 40,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						cursor: 'pointer',
+						pointerEvents: 'all',
+					}}
+					onClick={() => {
+						StackBlitzSDK.openProject(
+							{
+								files: {
+									'index.html': shape.props.html,
+									'index.js': '',
+								},
+								template: 'javascript',
+								title: 'tldrawn!',
+							},
+							{
+								openFile: 'index.html',
+							}
+						)
+						toast.addToast({
+							icon: 'external-link',
+							title: 'Opened in code playground',
+						})
+					}}
+					onPointerDown={stopEventPropagation}
+				>
+					<Icon icon="external-link" />
 				</div>
 			</HTMLContainer>
 		)
